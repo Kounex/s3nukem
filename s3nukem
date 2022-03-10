@@ -23,6 +23,7 @@ rescue LoadError
   puts "or for Ruby 1.9: sudo gem install dmarkow-right_aws --source http://gems.github.com"
 end
 
+endpoint_url = 'http://s3.amazonaws.com'
 access_key = nil
 secret_key = nil
 thread_count = 10
@@ -37,6 +38,10 @@ begin
   opts.banner = "Usage: #{$PROGRAM_NAME} [options] buckets..."
   opts.separator ''
   opts.separator 'Options:'
+  opts.on('-e',
+          '--endpoint-url ENDPOINT_URL',
+          String,
+          "Endpoint Url (default #{endpoint_url})") {|url| endpoint_url = url}
   opts.on('-a',
           '--access ACCESS',
           String,
@@ -80,7 +85,7 @@ end
 # Make a connection for bucket deletion
 log = Logger.new(STDOUT)
 log.level = Logger::ERROR
-mains3 = RightAws::S3Interface.new(access_key, secret_key, :multi_thread => true, :port => 80, :protocol => 'http', :logger => log)
+mains3 = RightAws::S3Interface.new(access_key, secret_key, :multi_thread => true, :server => endpoint_url, :port => 80, :protocol => 'http', :logger => log)
 begin
   mains3.list_all_my_buckets  # Confirm credentials
 rescue RightAws::AwsError => e
@@ -105,7 +110,7 @@ buckets.each do |bucket|
   threads << Thread.new do
     Thread.current[:number] = "CATALOG"
     puts "Starting catalog thread..."
-    s3 = RightAws::S3Interface.new(access_key, secret_key, :multi_thread => true, :port => 80, :protocol => 'http', :logger => log)
+    s3 = RightAws::S3Interface.new(access_key, secret_key, :multi_thread => true, :server => endpoint_url, :port => 80, :protocol => 'http', :logger => log)
     prefix = ''
     begin
       while queue.length > max_queue
@@ -127,7 +132,7 @@ buckets.each do |bucket|
     threads << Thread.new(count) do |number|
       Thread.current[:number] = number
       puts "Starting deletion thread #{number}..."
-      s3 = RightAws::S3Interface.new(access_key, secret_key, :multi_thread => true, :port => 80, :protocol => 'http', :logger => log)
+      s3 = RightAws::S3Interface.new(access_key, secret_key, :multi_thread => true, :server => endpoint_url, :port => 80, :protocol => 'http', :logger => log)
       begin
         key = queue.deq
         unless key == :END_OF_BUCKET
